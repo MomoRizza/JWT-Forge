@@ -1,0 +1,7 @@
+services:
+  jwt-forge:
+    build: .
+    container_name: jwt-forge
+    ports:
+      - "8000:8000"      # change left number to expose on a different host port
+    restart: unless-stopped
